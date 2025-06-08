@@ -12,6 +12,7 @@ class AddEditPlantActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityAddEditPlantBinding
     private var plantId: Int? = null
+    // Simpan nama asli untuk klausa WHERE di API saat update
     private var originalPlantName: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -19,16 +20,22 @@ class AddEditPlantActivity : AppCompatActivity() {
         binding = ActivityAddEditPlantBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Cek apakah ini mode edit
+        // Cek apakah intent membawa data untuk mode edit
         if (intent.hasExtra("PLANT_ID")) {
             plantId = intent.getIntExtra("PLANT_ID", 0)
             originalPlantName = intent.getStringExtra("PLANT_NAME")
+
             binding.etPlantName.setText(originalPlantName)
             binding.etPlantDescription.setText(intent.getStringExtra("PLANT_DESC"))
             binding.etPlantPrice.setText(intent.getStringExtra("PLANT_PRICE"))
-            title = "Edit Tanaman"
+
+            // Ubah judul halaman
+            supportActionBar?.title = "Edit Tanaman"
+            binding.btnSave.text = "Update"
         } else {
-            title = "Tambah Tanaman"
+            // Mode Tambah
+            supportActionBar?.title = "Tambah Tanaman"
+            binding.btnSave.text = "Simpan"
         }
 
         binding.btnSave.setOnClickListener {
@@ -47,12 +54,9 @@ class AddEditPlantActivity : AppCompatActivity() {
         }
 
         val plant = Plant(id = plantId ?: 0, plant_name = name, description = description, price = price)
-
         val call: Call<Void> = if (plantId != null) {
-            // Mode Update
             ApiClient.instance.updatePlant(originalPlantName!!, plant)
         } else {
-            // Mode Create
             ApiClient.instance.createPlant(plant)
         }
 
@@ -60,14 +64,15 @@ class AddEditPlantActivity : AppCompatActivity() {
             override fun onResponse(call: Call<Void>, response: Response<Void>) {
                 if (response.isSuccessful) {
                     Toast.makeText(this@AddEditPlantActivity, "Data berhasil disimpan", Toast.LENGTH_SHORT).show()
-                    finish() // Kembali ke MainActivity
+                    finish()
                 } else {
-                    Toast.makeText(this@AddEditPlantActivity, "Gagal menyimpan data", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@AddEditPlantActivity, "Gagal menyimpan data: ${response.code()}", Toast.LENGTH_LONG).show()
                 }
             }
 
             override fun onFailure(call: Call<Void>, t: Throwable) {
-                Toast.makeText(this@AddEditPlantActivity, t.message, Toast.LENGTH_SHORT).show()
+                // Memberi tahu user jika ada masalah jaringan
+                Toast.makeText(this@AddEditPlantActivity, "Error Jaringan: ${t.message}", Toast.LENGTH_LONG).show()
             }
         })
     }

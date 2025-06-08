@@ -24,9 +24,8 @@ class MainActivity : AppCompatActivity() {
         setupRecyclerView()
         loadPlants()
 
-        binding.fabAddPlant.setOnClickListener {
-            // Arahkan ke AddEditPlantActivity untuk menambah data baru
-            // Kita akan buat activity ini selanjutnya
+        // Fungsi TAMBAH: Membuka AddEditPlantActivity tanpa mengirim data
+        binding.btnAddPlant.setOnClickListener {
             val intent = Intent(this, AddEditPlantActivity::class.java)
             startActivity(intent)
         }
@@ -35,8 +34,8 @@ class MainActivity : AppCompatActivity() {
     private fun setupRecyclerView() {
         plantAdapter = PlantAdapter(
             mutableListOf(),
-            onItemClick = { plant ->
-                // Arahkan ke AddEditPlantActivity dengan data tanaman untuk diedit
+            // Aksi #1: EDIT Tanaman
+            onEditClick = { plant ->
                 val intent = Intent(this, AddEditPlantActivity::class.java).apply {
                     putExtra("PLANT_ID", plant.id)
                     putExtra("PLANT_NAME", plant.plant_name)
@@ -45,37 +44,24 @@ class MainActivity : AppCompatActivity() {
                 }
                 startActivity(intent)
             },
-            onItemLongClick = { plant ->
-                // Tampilkan dialog konfirmasi hapus
+            // Aksi #2: HAPUS Tanaman
+            onDeleteClick = { plant ->
                 showDeleteConfirmationDialog(plant)
+            },
+            // Aksi #3: DETAIL Tanaman
+            onDetailClick = { plant ->
+                val intent = Intent(this, PlantDetailActivity::class.java).apply {
+                    putExtra("PLANT_NAME", plant.plant_name)
+                    putExtra("PLANT_DESC", plant.description)
+                    putExtra("PLANT_PRICE", plant.price)
+                }
+                startActivity(intent)
             }
         )
         binding.rvPlants.apply {
             layoutManager = LinearLayoutManager(this@MainActivity)
             adapter = plantAdapter
         }
-    }
-
-    private fun loadPlants() {
-        // Ganti tipe Callback ke PlantResponse
-        ApiClient.instance.getAllPlants().enqueue(object : Callback<PlantResponse> {
-            // Ganti tipe Response ke PlantResponse
-            override fun onResponse(call: Call<PlantResponse>, response: Response<PlantResponse>) {
-                if (response.isSuccessful) {
-                    // Ekstrak list dari dalam objek response.body()
-                    response.body()?.let {
-                        plantAdapter.updateData(it.data)
-                    }
-                } else {
-                    Toast.makeText(this@MainActivity, "Gagal memuat data: ${response.message()}", Toast.LENGTH_SHORT).show()
-                }
-            }
-
-            // Ganti tipe Call ke PlantResponse
-            override fun onFailure(call: Call<PlantResponse>, t: Throwable) {
-                Toast.makeText(this@MainActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
-            }
-        })
     }
 
     private fun showDeleteConfirmationDialog(plant: Plant) {
@@ -92,21 +78,41 @@ class MainActivity : AppCompatActivity() {
             override fun onResponse(call: Call<Void>, response: Response<Void>) {
                 if (response.isSuccessful) {
                     Toast.makeText(this@MainActivity, "${plant.plant_name} berhasil dihapus", Toast.LENGTH_SHORT).show()
-                    loadPlants() // Muat ulang daftar tanaman
+                    loadPlants()
                 } else {
-                    Toast.makeText(this@MainActivity, "Gagal menghapus", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "Gagal menghapus: ${response.code()}", Toast.LENGTH_SHORT).show()
                 }
             }
 
             override fun onFailure(call: Call<Void>, t: Throwable) {
-                Toast.makeText(this@MainActivity, t.message, Toast.LENGTH_SHORT).show()
+                // Memberi tahu user jika ada masalah jaringan
+                Toast.makeText(this@MainActivity, "Error Jaringan: ${t.message}", Toast.LENGTH_LONG).show()
+            }
+        })
+    }
+
+    private fun loadPlants() {
+        ApiClient.instance.getAllPlants().enqueue(object : Callback<PlantResponse> {
+            override fun onResponse(call: Call<PlantResponse>, response: Response<PlantResponse>) {
+                if (response.isSuccessful) {
+                    response.body()?.let {
+                        plantAdapter.updateData(it.data)
+                    }
+                } else {
+                    Toast.makeText(this@MainActivity, "Gagal memuat data: ${response.message()}", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            override fun onFailure(call: Call<PlantResponse>, t: Throwable) {
+                // Memberi tahu user jika ada masalah jaringan
+                Toast.makeText(this@MainActivity, "Error Jaringan: ${t.message}", Toast.LENGTH_LONG).show()
             }
         })
     }
 
     override fun onResume() {
         super.onResume()
-        // Muat ulang data setiap kali kembali ke activity ini
+        // Muat ulang data setiap kali kembali ke activity ini untuk melihat perubahan
         loadPlants()
     }
 }

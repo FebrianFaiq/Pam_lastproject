@@ -37,6 +37,11 @@
             android:name=".AddEditPlantActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".PlantDetailActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity"/>
+
     </application>
 
 </manifest>
